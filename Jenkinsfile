@@ -3,12 +3,12 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "govindmj2002/todo-app"
-        K8S_NAMESPACE = "default"  // Replace with your Kubernetes namespace
-        CANARY_TRAFFIC_PERCENTAGE = 10  // Adjust the percentage of traffic for the canary release
-        ISTIO_HOST = "todo-app"  // Replace with your Istio host name
-        ISTIO_PRIMARY_SUBSET = "primary"  // Istio subset name for the primary release
-        ISTIO_CANARY_SUBSET = "canary"  // Istio subset name for the canary release
-        CANARY_SERVICE_URL = "http://3.110.186.173:32274/health-check"  // Replace with your canary service health check URL
+        K8S_NAMESPACE = "default"
+        CANARY_TRAFFIC_PERCENTAGE = 10
+        ISTIO_HOST = "todo-app"
+        ISTIO_PRIMARY_SUBSET = "primary"
+        ISTIO_CANARY_SUBSET = "canary"
+        CANARY_SERVICE_URL = "http://3.110.186.173:32274/health-check"
     }
 
     stages {
@@ -43,12 +43,11 @@ pipeline {
         stage('Shift Traffic to Canary') {
             steps {
                 script {
-                    // Shift a percentage of traffic to the canary release
-                    def canaryTraffic = (100 - (CANARY_TRAFFIC_PERCENTAGE as Integer))
-                    def canaryPercentage = (CANARY_TRAFFIC_PERCENTAGE as Integer)
-                    
+                    def canaryTraffic = 100 - (CANARY_TRAFFIC_PERCENTAGE as Integer)
+                    def canaryPercentage = CANARY_TRAFFIC_PERCENTAGE as Integer
+
                     sh """
-                    cat <<EOF | kubectl apply -f -
+                    cat <<-EOF | kubectl apply -f -
                     apiVersion: networking.istio.io/v1alpha3
                     kind: VirtualService
                     metadata:
@@ -76,7 +75,6 @@ pipeline {
         stage('Run Canary Tests') {
             steps {
                 script {
-                    // Run tests to validate the canary release
                     def canaryTestResult = sh(script: "curl -s $CANARY_SERVICE_URL", returnStatus: true)
                     if (canaryTestResult != 0) {
                         error "Canary tests failed. Aborting the deployment."
@@ -88,9 +86,8 @@ pipeline {
         stage('Shift Traffic to Primary') {
             steps {
                 script {
-                    // Shift all traffic to the primary release if canary tests pass
                     sh """
-                    kubectl apply -f - <<EOF
+                    cat <<-EOF | kubectl apply -f -
                     apiVersion: networking.istio.io/v1alpha3
                     kind: VirtualService
                     metadata:
