@@ -43,36 +43,10 @@ pipeline {
         stage('Shift Traffic to Canary') {
             steps {
                 script {
-                    def canaryTraffic = 100 - CANARY_TRAFFIC_PERCENTAGE.toInteger()
-                    def canaryPercentage = CANARY_TRAFFIC_PERCENTAGE.toInteger()
-
-                    sh """
-                    cat > /tmp/virtual-service.yaml <<EOF
-                    apiVersion: networking.istio.io/v1alpha3
-                    kind: VirtualService
-                    metadata:
-                    name: todo-app
-                    namespace: ${K8S_NAMESPACE}
-                    spec:
-                    hosts:
-                        - ${ISTIO_HOST}
-                    http:
-                        - route:
-                            - destination:
-                                host: ${ISTIO_HOST}
-                                subset: ${ISTIO_PRIMARY_SUBSET}
-                            weight: ${canaryTraffic}
-                            - destination:
-                                host: ${ISTIO_HOST}
-                                subset: ${ISTIO_CANARY_SUBSET}
-                            weight: ${canaryPercentage}
-                    EOF
-                    """
-                    sh 'kubectl apply -f /tmp/virtual-service.yaml'
+                    sh "./create_virtual_service.sh $K8S_NAMESPACE $ISTIO_HOST $ISTIO_PRIMARY_SUBSET $ISTIO_CANARY_SUBSET $CANARY_TRAFFIC_PERCENTAGE"
                 }
             }
         }
-
 
         stage('Run Canary Tests') {
             steps {
