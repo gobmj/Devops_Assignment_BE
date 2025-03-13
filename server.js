@@ -1,4 +1,4 @@
-//server.js is this file
+//server.js
 
 const express = require('express');
 const mongoose = require('mongoose');
