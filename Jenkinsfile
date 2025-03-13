@@ -59,7 +59,7 @@ pipeline {
                             - destination:
                                 host: $ISTIO_HOST
                                 subset: $ISTIO_PRIMARY_SUBSET
-                              weight: $((100 - $CANARY_TRAFFIC_PERCENTAGE))
+                              weight: ${(100 - CANARY_TRAFFIC_PERCENTAGE)}  // Corrected arithmetic operation
                             - destination:
                                 host: $ISTIO_HOST
                                 subset: $ISTIO_CANARY_SUBSET
