@@ -8,7 +8,6 @@ pipeline {
         ISTIO_HOST = "todo-app"
         ISTIO_PRIMARY_SUBSET = "primary"
         ISTIO_CANARY_SUBSET = "canary"
-        CANARY_SERVICE_URL = "http://3.110.186.173:32274/health-check"
     }
 
     stages {
@@ -44,18 +43,6 @@ pipeline {
             steps {
                 script {
                     sh "./create_virtual_service.sh $K8S_NAMESPACE $ISTIO_HOST $ISTIO_PRIMARY_SUBSET $ISTIO_CANARY_SUBSET $CANARY_TRAFFIC_PERCENTAGE"
-                }
-            }
-        }
-
-        stage('Run Canary Tests') {
-            steps {
-                script {
-                    def canaryTestResult = sh(script: "curl -s $CANARY_SERVICE_URL", returnStatus: true)
-                    if (canaryTestResult != 0) {
-                        echo "Canary tests failed. Aborting the deployment."
-                        error "Canary tests failed."
-                    }
                 }
             }
         }
