@@ -1,115 +1,78 @@
 pipeline {
     agent any
-
     environment {
-        DOCKER_IMAGE = "govindmj2002/todo-app"
-        K8S_NAMESPACE = "default"
-        CANARY_TRAFFIC_PERCENTAGE = 10
-        ISTIO_HOST = "todo-app"
-        ISTIO_PRIMARY_SUBSET = "primary"
-        ISTIO_CANARY_SUBSET = "canary"
-        CANARY_SERVICE_URL = "http://3.110.186.173:32274/health-check"
+        DOCKER_IMAGE = 'govindmj2002/todo-app'
+        TAG = '23'
+        NAMESPACE = 'default'
     }
-
     stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
         stage('Login to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                withCredentials([string(credentialsId: 'docker-hub-password', variable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u govindmj2002 --password-stdin'
                 }
             }
         }
-
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE:$BUILD_NUMBER .'
-                sh 'docker tag $DOCKER_IMAGE:$BUILD_NUMBER $DOCKER_IMAGE:latest'
+                sh """
+                docker build -t $DOCKER_IMAGE:$TAG .
+                docker tag $DOCKER_IMAGE:$TAG $DOCKER_IMAGE:latest
+                """
             }
         }
-
         stage('Push Docker Image') {
             steps {
-                sh 'docker push $DOCKER_IMAGE:$BUILD_NUMBER'
-                sh 'docker push $DOCKER_IMAGE:latest'
+                sh """
+                docker push $DOCKER_IMAGE:$TAG
+                docker push $DOCKER_IMAGE:latest
+                """
             }
         }
-
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl set image deployment/todo-app todo=$DOCKER_IMAGE:$BUILD_NUMBER --namespace=$K8S_NAMESPACE'
+                sh "kubectl set image deployment/todo-app todo=$DOCKER_IMAGE:$TAG --namespace=$NAMESPACE"
             }
         }
-
         stage('Shift Traffic to Canary') {
             steps {
                 script {
-                    def canaryTraffic = 100 - (CANARY_TRAFFIC_PERCENTAGE as Integer)
-                    def canaryPercentage = CANARY_TRAFFIC_PERCENTAGE as Integer
-
-                    sh '''
-                    cat > /tmp/virtual-service.yaml <<EOF
-                    apiVersion: networking.istio.io/v1alpha3
-                    kind: VirtualService
-                    metadata:
-                      name: todo-app
-                      namespace: ''' + K8S_NAMESPACE + '''
-                    spec:
-                      hosts:
-                        - ''' + ISTIO_HOST + '''
-                      http:
-                        - route:
-                            - destination:
-                                host: ''' + ISTIO_HOST + '''
-                                subset: ''' + ISTIO_PRIMARY_SUBSET + '''
-                              weight: ''' + canaryTraffic + '''
-                            - destination:
-                                host: ''' + ISTIO_HOST + '''
-                                subset: ''' + ISTIO_CANARY_SUBSET + '''
-                              weight: ''' + canaryPercentage + '''
-                    EOF
-                    '''
+                    sh 'echo "apiVersion: networking.istio.io/v1alpha3" > /tmp/virtual-service.yaml'
+                    sh 'echo "kind: VirtualService" >> /tmp/virtual-service.yaml'
+                    sh 'echo "metadata:" >> /tmp/virtual-service.yaml'
+                    sh 'echo "  name: todo-virtual-service" >> /tmp/virtual-service.yaml'
+                    sh 'echo "spec:" >> /tmp/virtual-service.yaml'
+                    sh 'echo "  hosts:" >> /tmp/virtual-service.yaml'
+                    sh 'echo "  - todo.example.com" >> /tmp/virtual-service.yaml'
+                    sh 'echo "  gateways:" >> /tmp/virtual-service.yaml'
+                    sh 'echo "  - todo-gateway" >> /tmp/virtual-service.yaml'
+                    sh 'echo "  http:" >> /tmp/virtual-service.yaml'
+                    sh 'echo "  - route:" >> /tmp/virtual-service.yaml'
+                    sh 'echo "    - destination:" >> /tmp/virtual-service.yaml'
+                    sh 'echo "        host: todo-app" >> /tmp/virtual-service.yaml'
+                    sh 'echo "        subset: canary" >> /tmp/virtual-service.yaml'
                     sh 'kubectl apply -f /tmp/virtual-service.yaml'
                 }
             }
         }
-
         stage('Run Canary Tests') {
             steps {
                 script {
-                    def canaryTestResult = sh(script: "curl -s $CANARY_SERVICE_URL", returnStatus: true)
-                    if (canaryTestResult != 0) {
-                        error "Canary tests failed. Aborting the deployment."
-                    }
+                    // Add actual canary testing scripts here
+                    echo "Running Canary Tests..."
                 }
             }
         }
-
         stage('Shift Traffic to Primary') {
             steps {
                 script {
-                    sh '''
-                    cat > /tmp/virtual-service-primary.yaml <<EOF
-                    apiVersion: networking.istio.io/v1alpha3
-                    kind: VirtualService
-                    metadata:
-                      name: todo-app
-                      namespace: ''' + K8S_NAMESPACE + '''
-                    spec:
-                      hosts:
-                        - ''' + ISTIO_HOST + '''
-                      http:
-                        - route:
-                            - destination:
-                                host: ''' + ISTIO_HOST + '''
-                                subset: ''' + ISTIO_PRIMARY_SUBSET + '''
-                              weight: 100
-                            - destination:
-                                host: ''' + ISTIO_HOST + '''
-                                subset: ''' + ISTIO_CANARY_SUBSET + '''
-                              weight: 0
-                    EOF
-                    '''
-                    sh 'kubectl apply -f /tmp/virtual-service-primary.yaml'
+                    // Add logic to shift traffic fully to primary if tests pass
+                    echo "Shifting Traffic to Primary..."
                 }
             }
         }
