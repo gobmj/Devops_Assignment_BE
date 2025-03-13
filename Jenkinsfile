@@ -44,6 +44,9 @@ pipeline {
             steps {
                 script {
                     // Shift a percentage of traffic to the canary release
+                    def canaryTraffic = (100 - (CANARY_TRAFFIC_PERCENTAGE as Integer))
+                    def canaryPercentage = (CANARY_TRAFFIC_PERCENTAGE as Integer)
+                    
                     sh """
                     kubectl apply -f - <<EOF
                     apiVersion: networking.istio.io/v1alpha3
@@ -59,11 +62,11 @@ pipeline {
                             - destination:
                                 host: $ISTIO_HOST
                                 subset: $ISTIO_PRIMARY_SUBSET
-                              weight: ${(100 - CANARY_TRAFFIC_PERCENTAGE)}  // Corrected arithmetic operation
+                              weight: $canaryTraffic
                             - destination:
                                 host: $ISTIO_HOST
                                 subset: $ISTIO_CANARY_SUBSET
-                              weight: $CANARY_TRAFFIC_PERCENTAGE
+                              weight: $canaryPercentage
                     EOF
                     """
                 }
