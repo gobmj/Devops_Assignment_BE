@@ -46,28 +46,29 @@ pipeline {
                     def canaryTraffic = 100 - (CANARY_TRAFFIC_PERCENTAGE as Integer)
                     def canaryPercentage = CANARY_TRAFFIC_PERCENTAGE as Integer
 
-                    sh """
-                    cat <<-EOF | kubectl apply -f -
+                    sh '''
+                    cat > /tmp/virtual-service.yaml <<EOF
                     apiVersion: networking.istio.io/v1alpha3
                     kind: VirtualService
                     metadata:
                       name: todo-app
-                      namespace: $K8S_NAMESPACE
+                      namespace: ''' + K8S_NAMESPACE + '''
                     spec:
                       hosts:
-                        - $ISTIO_HOST
+                        - ''' + ISTIO_HOST + '''
                       http:
                         - route:
                             - destination:
-                                host: $ISTIO_HOST
-                                subset: $ISTIO_PRIMARY_SUBSET
-                              weight: $canaryTraffic
+                                host: ''' + ISTIO_HOST + '''
+                                subset: ''' + ISTIO_PRIMARY_SUBSET + '''
+                              weight: ''' + canaryTraffic + '''
                             - destination:
-                                host: $ISTIO_HOST
-                                subset: $ISTIO_CANARY_SUBSET
-                              weight: $canaryPercentage
+                                host: ''' + ISTIO_HOST + '''
+                                subset: ''' + ISTIO_CANARY_SUBSET + '''
+                              weight: ''' + canaryPercentage + '''
                     EOF
-                    """
+                    '''
+                    sh 'kubectl apply -f /tmp/virtual-service.yaml'
                 }
             }
         }
@@ -86,28 +87,29 @@ pipeline {
         stage('Shift Traffic to Primary') {
             steps {
                 script {
-                    sh """
-                    cat <<-EOF | kubectl apply -f -
+                    sh '''
+                    cat > /tmp/virtual-service-primary.yaml <<EOF
                     apiVersion: networking.istio.io/v1alpha3
                     kind: VirtualService
                     metadata:
                       name: todo-app
-                      namespace: $K8S_NAMESPACE
+                      namespace: ''' + K8S_NAMESPACE + '''
                     spec:
                       hosts:
-                        - $ISTIO_HOST
+                        - ''' + ISTIO_HOST + '''
                       http:
                         - route:
                             - destination:
-                                host: $ISTIO_HOST
-                                subset: $ISTIO_PRIMARY_SUBSET
+                                host: ''' + ISTIO_HOST + '''
+                                subset: ''' + ISTIO_PRIMARY_SUBSET + '''
                               weight: 100
                             - destination:
-                                host: $ISTIO_HOST
-                                subset: $ISTIO_CANARY_SUBSET
+                                host: ''' + ISTIO_HOST + '''
+                                subset: ''' + ISTIO_CANARY_SUBSET + '''
                               weight: 0
                     EOF
-                    """
+                    '''
+                    sh 'kubectl apply -f /tmp/virtual-service-primary.yaml'
                 }
             }
         }
