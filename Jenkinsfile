@@ -84,35 +84,38 @@ pipeline {
                 }
             }
         }
-
-        stage('Shift Traffic to Primary') {
+        stage('Shift Traffic to Canary') {
             steps {
                 script {
-                    // Shift all traffic to the primary release if canary tests pass
+                    // Shift a percentage of traffic to the canary release
+                    def canaryTraffic = (100 - (CANARY_TRAFFIC_PERCENTAGE as Integer))
+                    def canaryPercentage = (CANARY_TRAFFIC_PERCENTAGE as Integer)
+                    
                     sh """
-                    kubectl apply -f - <<EOF
+                    cat <<EOF | kubectl apply -f -
                     apiVersion: networking.istio.io/v1alpha3
                     kind: VirtualService
                     metadata:
-                      name: todo-app
-                      namespace: $K8S_NAMESPACE
+                    name: todo-app
+                    namespace: $K8S_NAMESPACE
                     spec:
-                      hosts:
-                        - $ISTIO_HOST
-                      http:
-                        - route:
-                            - destination:
-                                host: $ISTIO_HOST
-                                subset: $ISTIO_PRIMARY_SUBSET
-                              weight: 100
-                            - destination:
-                                host: $ISTIO_HOST
-                                subset: $ISTIO_CANARY_SUBSET
-                              weight: 0
+                    hosts:
+                    - $ISTIO_HOST
+                    http:
+                    - route:
+                        - destination:
+                            host: $ISTIO_HOST
+                            subset: $ISTIO_PRIMARY_SUBSET
+                        weight: $canaryTraffic
+                        - destination:
+                            host: $ISTIO_HOST
+                            subset: $ISTIO_CANARY_SUBSET
+                        weight: $canaryPercentage
                     EOF
                     """
                 }
             }
         }
+
     }
 }
