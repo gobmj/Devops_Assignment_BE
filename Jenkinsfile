@@ -48,50 +48,6 @@ pipeline {
                     def canaryPercentage = (CANARY_TRAFFIC_PERCENTAGE as Integer)
                     
                     sh """
-                    kubectl apply -f - <<EOF
-                    apiVersion: networking.istio.io/v1alpha3
-                    kind: VirtualService
-                    metadata:
-                      name: todo-app
-                      namespace: $K8S_NAMESPACE
-                    spec:
-                      hosts:
-                        - $ISTIO_HOST
-                      http:
-                        - route:
-                            - destination:
-                                host: $ISTIO_HOST
-                                subset: $ISTIO_PRIMARY_SUBSET
-                              weight: $canaryTraffic
-                            - destination:
-                                host: $ISTIO_HOST
-                                subset: $ISTIO_CANARY_SUBSET
-                              weight: $canaryPercentage
-                    EOF
-                    """
-                }
-            }
-        }
-
-        stage('Run Canary Tests') {
-            steps {
-                script {
-                    // Run tests to validate the canary release
-                    def canaryTestResult = sh(script: "curl -s $CANARY_SERVICE_URL", returnStatus: true)
-                    if (canaryTestResult != 0) {
-                        error "Canary tests failed. Aborting the deployment."
-                    }
-                }
-            }
-        }
-        stage('Shift Traffic to Canary') {
-            steps {
-                script {
-                    // Shift a percentage of traffic to the canary release
-                    def canaryTraffic = (100 - (CANARY_TRAFFIC_PERCENTAGE as Integer))
-                    def canaryPercentage = (CANARY_TRAFFIC_PERCENTAGE as Integer)
-                    
-                    sh """
                     cat <<EOF | kubectl apply -f -
                     apiVersion: networking.istio.io/v1alpha3
                     kind: VirtualService
@@ -117,5 +73,46 @@ pipeline {
             }
         }
 
+        stage('Run Canary Tests') {
+            steps {
+                script {
+                    // Run tests to validate the canary release
+                    def canaryTestResult = sh(script: "curl -s $CANARY_SERVICE_URL", returnStatus: true)
+                    if (canaryTestResult != 0) {
+                        error "Canary tests failed. Aborting the deployment."
+                    }
+                }
+            }
+        }
+
+        stage('Shift Traffic to Primary') {
+            steps {
+                script {
+                    // Shift all traffic to the primary release if canary tests pass
+                    sh """
+                    kubectl apply -f - <<EOF
+                    apiVersion: networking.istio.io/v1alpha3
+                    kind: VirtualService
+                    metadata:
+                      name: todo-app
+                      namespace: $K8S_NAMESPACE
+                    spec:
+                      hosts:
+                        - $ISTIO_HOST
+                      http:
+                        - route:
+                            - destination:
+                                host: $ISTIO_HOST
+                                subset: $ISTIO_PRIMARY_SUBSET
+                              weight: 100
+                            - destination:
+                                host: $ISTIO_HOST
+                                subset: $ISTIO_CANARY_SUBSET
+                              weight: 0
+                    EOF
+                    """
+                }
+            }
+        }
     }
 }
