@@ -52,21 +52,21 @@ pipeline {
                     apiVersion: networking.istio.io/v1alpha3
                     kind: VirtualService
                     metadata:
-                    name: todo-app
-                    namespace: $K8S_NAMESPACE
+                      name: todo-app
+                      namespace: $K8S_NAMESPACE
                     spec:
-                    hosts:
-                    - $ISTIO_HOST
-                    http:
-                    - route:
-                        - destination:
-                            host: $ISTIO_HOST
-                            subset: $ISTIO_PRIMARY_SUBSET
-                        weight: $canaryTraffic
-                        - destination:
-                            host: $ISTIO_HOST
-                            subset: $ISTIO_CANARY_SUBSET
-                        weight: $canaryPercentage
+                      hosts:
+                        - $ISTIO_HOST
+                      http:
+                        - route:
+                            - destination:
+                                host: $ISTIO_HOST
+                                subset: $ISTIO_PRIMARY_SUBSET
+                              weight: $canaryTraffic
+                            - destination:
+                                host: $ISTIO_HOST
+                                subset: $ISTIO_CANARY_SUBSET
+                              weight: $canaryPercentage
                     EOF
                     """
                 }
