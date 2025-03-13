@@ -43,33 +43,36 @@ pipeline {
         stage('Shift Traffic to Canary') {
             steps {
                 script {
-                    def canaryTraffic = 100 - (CANARY_TRAFFIC_PERCENTAGE as Integer)
-                    def canaryPercentage = CANARY_TRAFFIC_PERCENTAGE as Integer
-                    
-                    sh '''
-                    echo "apiVersion: networking.istio.io/v1alpha3" > /tmp/virtual-service.yaml
-                    echo "kind: VirtualService" >> /tmp/virtual-service.yaml
-                    echo "metadata:" >> /tmp/virtual-service.yaml
-                    echo "  name: todo-app" >> /tmp/virtual-service.yaml
-                    echo "  namespace: ${K8S_NAMESPACE}" >> /tmp/virtual-service.yaml
-                    echo "spec:" >> /tmp/virtual-service.yaml
-                    echo "  hosts:" >> /tmp/virtual-service.yaml
-                    echo "    - ${ISTIO_HOST}" >> /tmp/virtual-service.yaml
-                    echo "  http:" >> /tmp/virtual-service.yaml
-                    echo "    - route:" >> /tmp/virtual-service.yaml
-                    echo "        - destination:" >> /tmp/virtual-service.yaml
-                    echo "            host: ${ISTIO_HOST}" >> /tmp/virtual-service.yaml
-                    echo "            subset: ${ISTIO_PRIMARY_SUBSET}" >> /tmp/virtual-service.yaml
-                    echo "          weight: ${canaryTraffic}" >> /tmp/virtual-service.yaml
-                    echo "        - destination:" >> /tmp/virtual-service.yaml
-                    echo "            host: ${ISTIO_HOST}" >> /tmp/virtual-service.yaml
-                    echo "            subset: ${ISTIO_CANARY_SUBSET}" >> /tmp/virtual-service.yaml
-                    echo "          weight: ${canaryPercentage}" >> /tmp/virtual-service.yaml
-                    '''
+                    def canaryTraffic = 100 - CANARY_TRAFFIC_PERCENTAGE.toInteger()
+                    def canaryPercentage = CANARY_TRAFFIC_PERCENTAGE.toInteger()
+
+                    sh """
+                    cat > /tmp/virtual-service.yaml <<EOF
+                    apiVersion: networking.istio.io/v1alpha3
+                    kind: VirtualService
+                    metadata:
+                    name: todo-app
+                    namespace: ${K8S_NAMESPACE}
+                    spec:
+                    hosts:
+                        - ${ISTIO_HOST}
+                    http:
+                        - route:
+                            - destination:
+                                host: ${ISTIO_HOST}
+                                subset: ${ISTIO_PRIMARY_SUBSET}
+                            weight: ${canaryTraffic}
+                            - destination:
+                                host: ${ISTIO_HOST}
+                                subset: ${ISTIO_CANARY_SUBSET}
+                            weight: ${canaryPercentage}
+                    EOF
+                    """
                     sh 'kubectl apply -f /tmp/virtual-service.yaml'
                 }
             }
         }
+
 
         stage('Run Canary Tests') {
             steps {
