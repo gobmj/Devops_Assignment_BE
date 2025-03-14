@@ -33,11 +33,11 @@ pipeline {
             }
         }
 
-        // stage('Deploy to Kubernetes') {
-        //     steps {
-        //                 sh "kubectl set image deployment/todo-app todo=govindmj2002/todo-app:${BUILD_NUMBER} --namespace=todo-app"
-        //     }       
-        // }
+        stage('Deploy to Kubernetes') {
+            steps {
+                        sh "kubectl set image deployment/todo-app todo=govindmj2002/todo-app:${BUILD_NUMBER} --namespace=todo-app"
+            }       
+        }
 
 
         stage('Shift Traffic to Canary') {
