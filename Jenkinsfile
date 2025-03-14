@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "govindmj2002/todo-app"
-        K8S_NAMESPACE = "default"
+        K8S_NAMESPACE = "todo-app"
         CANARY_TRAFFIC_PERCENTAGE = 10
         ISTIO_HOST = "todo-app"
         ISTIO_PRIMARY_SUBSET = "primary"
@@ -34,13 +34,10 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-        steps {
-            script {
-                    sh "export KUBECONFIG=/home/ubuntu/.kube/config"
-                    sh "kubectl set image deployment/todo-app todo=govindmj2002/todo-app:${BUILD_NUMBER} --namespace=default"
-            }
+            steps {
+                        sh "kubectl set image deployment/todo-app todo=govindmj2002/todo-app:${BUILD_NUMBER} --namespace=default"
+            }       
         }
-    }
 
 
         stage('Shift Traffic to Canary') {
