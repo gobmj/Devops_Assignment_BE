@@ -1,4 +1,4 @@
-//server.js
+//server.js file is the entry point of the application. It connects to MongoDB, enables CORS, and starts the server.
 
 const express = require('express');
 const mongoose = require('mongoose');
