@@ -34,10 +34,14 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                sh 'kubectl set image deployment/todo-app todo=$DOCKER_IMAGE:$BUILD_NUMBER --namespace=$K8S_NAMESPACE'
+        steps {
+            script {
+                    sh "export KUBECONFIG=/home/ubuntu/.kube/config"
+                    sh "kubectl set image deployment/todo-app todo=govindmj2002/todo-app:${BUILD_NUMBER} --namespace=default"
             }
         }
+    }
+
 
         stage('Shift Traffic to Canary') {
             steps {
