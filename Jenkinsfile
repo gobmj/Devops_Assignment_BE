@@ -8,6 +8,7 @@ pipeline {
         ISTIO_HOST = "todo-app"
         ISTIO_PRIMARY_SUBSET = "primary"
         ISTIO_CANARY_SUBSET = "canary"
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
     stages {
@@ -35,10 +36,9 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                        sh "kubectl set image deployment/todo-app todo=govindmj2002/todo-app:${BUILD_NUMBER} --namespace=todo-app"
+                sh "kubectl set image deployment/todo-app todo=govindmj2002/todo-app:${BUILD_NUMBER} --namespace=todo-app"
             }       
         }
-
 
         stage('Shift Traffic to Canary') {
             steps {
